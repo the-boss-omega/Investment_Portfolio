@@ -10,9 +10,11 @@ import java.util.*;
 public class PortfolioController {
 
     private final UserStore userStore;
+    private final PortfolioDatabaseFunctions databaseFunctions;
 
-    public PortfolioController(UserStore userStore) {
+    public PortfolioController(UserStore userStore, PortfolioDatabaseFunctions databaseFunctions) {
         this.userStore = userStore;
+        this.databaseFunctions = databaseFunctions;
     }
 
     @GetMapping("/portfolio")
@@ -35,6 +37,33 @@ public class PortfolioController {
         }
         result.put("accounts", accountList);
         return result;
+    }
+
+    @PostMapping("/db/save")
+    public Map<String, Object> savePortfolioToDatabase(HttpServletRequest request) {
+        int userId = (int) request.getAttribute("userId");
+        Portfolio portfolio = userStore.getPortfolio(userId);
+        int saved = 0;
+
+        for (Account account : portfolio.getAccounts()) {
+            databaseFunctions.saveAccount(userId, account);
+            saved++;
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "ok");
+        result.put("userId", userId);
+        result.put("savedAccounts", saved);
+        return result;
+    }
+
+    @GetMapping("/db/accounts/{userId}")
+    public List<Map<String, Object>> loadAccountsFromDatabase(@PathVariable int userId) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Account account : databaseFunctions.loadAccounts(userId)) {
+            list.add(serializeAccount(account));
+        }
+        return list;
     }
 
     @GetMapping("/accounts")
@@ -61,6 +90,122 @@ public class PortfolioController {
             }
         }
         return List.of();
+    }
+
+    @PostMapping("/db/reload/{userId}")
+    public Map<String, Object> reloadPortfolioFromDatabase(@PathVariable int userId) {
+        Portfolio portfolio = userStore.getPortfolio(userId);
+        portfolio.clearAccounts();
+        List<Account> loadedAccounts = databaseFunctions.loadAccounts(userId);
+
+        for (Account account : loadedAccounts) {
+            portfolio.addAccount(account);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "ok");
+        result.put("userId", userId);
+        result.put("loadedAccounts", loadedAccounts.size());
+        result.put("totalPositions", loadedAccounts.stream()
+                .mapToInt(a -> a.getPositions().size())
+                .sum());
+        return result;
+    }
+
+    @PostMapping("/db/update-position")
+    public Map<String, Object> updatePosition(@RequestBody UpdatePositionRequest request,
+                                              HttpServletRequest httpRequest) {
+        int userId = (int) httpRequest.getAttribute("userId");
+        Portfolio portfolio = userStore.getPortfolio(userId);
+
+        for (Account account : portfolio.getAccounts()) {
+            if (account.getProviderName().equalsIgnoreCase(request.provider())) {
+                Position existingPos = account.getPosition(request.symbol());
+                if (existingPos != null) {
+                    FinancialAsset asset = createAsset(request.assetType(), request.symbol(),
+                            request.currentPrice(), request.exchange());
+                    Position updatedPos = new Position(request.originalPrice(),
+                            request.quantity(), asset);
+                    account.addOrUpdatePosition(updatedPos);
+
+                    databaseFunctions.saveAccount(userId, account);
+
+                    return Map.of(
+                            "status", "ok",
+                            "message", "Position updated",
+                            "symbol", request.symbol(),
+                            "newQuantity", request.quantity(),
+                            "newPrice", request.currentPrice()
+                    );
+                }
+            }
+        }
+
+        return Map.of("status", "error", "message", "Position not found");
+    }
+
+    @PostMapping("/db/add-position")
+    public Map<String, Object> addPosition(@RequestBody AddPositionRequest request,
+                                           HttpServletRequest httpRequest) {
+        int userId = (int) httpRequest.getAttribute("userId");
+        Portfolio portfolio = userStore.getPortfolio(userId);
+
+        for (Account account : portfolio.getAccounts()) {
+            if (account.getProviderName().equalsIgnoreCase(request.provider())) {
+                FinancialAsset asset = createAsset(request.assetType(), request.symbol(),
+                        request.currentPrice(), request.exchange());
+                Position newPos = new Position(request.originalPrice(), request.quantity(), asset);
+                account.addOrUpdatePosition(newPos);
+
+                databaseFunctions.saveAccount(userId, account);
+
+                return Map.of(
+                        "status", "ok",
+                        "message", "Position added",
+                        "symbol", request.symbol(),
+                        "quantity", request.quantity(),
+                        "provider", request.provider()
+                );
+            }
+        }
+
+        return Map.of("status", "error", "message", "Account not found");
+    }
+
+    @DeleteMapping("/db/position/{provider}/{symbol}")
+    public Map<String, Object> deletePosition(@PathVariable String provider,
+                                              @PathVariable String symbol,
+                                              HttpServletRequest httpRequest) {
+        int userId = (int) httpRequest.getAttribute("userId");
+        Portfolio portfolio = userStore.getPortfolio(userId);
+
+        for (Account account : portfolio.getAccounts()) {
+            if (account.getProviderName().equalsIgnoreCase(provider)) {
+                boolean removed = account.removePosition(symbol);
+                if (removed) {
+                    databaseFunctions.saveAccount(userId, account);
+
+                    return Map.of(
+                            "status", "ok",
+                            "message", "Position deleted",
+                            "symbol", symbol,
+                            "provider", provider
+                    );
+                }
+            }
+        }
+
+        return Map.of("status", "error", "message", "Position not found");
+    }
+
+    private FinancialAsset createAsset(String assetType, String symbol, float currentPrice, String exchange) {
+        return switch (assetType.toUpperCase()) {
+            case "STOCK" -> new Stock(symbol, currentPrice);
+            case "ETF" -> new ETF(symbol, currentPrice);
+            case "CRYPTO" -> new Crypto(symbol, currentPrice, exchange != null ? exchange : "");
+            case "FOREX" -> new Forex(symbol, currentPrice, exchange != null ? exchange : "");
+            default -> new Stock(symbol, currentPrice);
+        };
     }
 
     static Map<String, Object> serializeAccount(Account account) {

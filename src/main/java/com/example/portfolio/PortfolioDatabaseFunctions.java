@@ -54,8 +54,6 @@ public class PortfolioDatabaseFunctions {
     }
 
     public void saveAccount(int userId, Account account) {
-        createSchemaIfMissing();
-
         String provider = account.getProvider().name();
         String customProvider = account.getProvider() == AccountProvider.OTHER ? account.getProviderName() : null;
 
@@ -103,8 +101,6 @@ public class PortfolioDatabaseFunctions {
     }
 
     public List<Account> loadAccounts(int userId) {
-        createSchemaIfMissing();
-
         List<Account> accounts = new ArrayList<>();
         List<AccountRow> accountRows = jdbcTemplate.query(
                 "SELECT id, provider, custom_provider_name FROM accounts WHERE user_id = ?",

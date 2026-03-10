@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root {
+    --bg:#0b0e11;--card:#141921;--card-hover:#1a2030;--border:#1e2738;
+    --text:#e1e4ea;--text-dim:#7a8599;--accent:#4a9eff;--green:#00c896;--red:#ff4d6a;
+    --font:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;--radius:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;}
+  a{color:var(--accent);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+
+  /* Auth Pages */
+  .auth-wrapper{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+  .auth-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:40px;width:100%;max-width:400px;}
+  .auth-box h2{margin-bottom:8px;font-size:1.5rem;}
+  .auth-box .sub{color:var(--text-dim);margin-bottom:24px;font-size:.9rem;}
+  .form-group{margin-bottom:16px;}
+  .form-group label{display:block;font-size:.82rem;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;}
+  .form-group input,.form-group select{width:100%;padding:10px 14px;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.95rem;font-family:var(--font);outline:none;transition:border .2s;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent);}
+  .btn{display:inline-block;padding:10px 24px;border:none;border-radius:8px;font-size:.95rem;font-family:var(--font);cursor:pointer;transition:all .2s;font-weight:600;}
+  .btn-primary{background:var(--accent);color:#fff;width:100%;}
+  .btn-primary:hover{background:#3d8ce6;}
+  .btn-sm{padding:6px 16px;font-size:.85rem;}
+  .btn-danger{background:var(--red);color:#fff;}
+  .btn-danger:hover{background:#e6364f;}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn-outline:hover{background:var(--card-hover);border-color:var(--text-dim);}
+  .btn-green{background:var(--green);color:#fff;}
+  .btn-green:hover{background:#00b085;}
+  .auth-error{color:var(--red);font-size:.85rem;margin-bottom:12px;display:none;}
+  .auth-switch{text-align:center;margin-top:16px;font-size:.9rem;color:var(--text-dim);}
+
+  /* Layout */
+  .app-layout{display:flex;min-height:100vh;}
+  .sidebar{width:220px;background:var(--card);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;display:flex;flex-direction:column;}
+  .sidebar-brand{padding:0 20px 20px;font-size:1.2rem;font-weight:700;border-bottom:1px solid var(--border);margin-bottom:12px;}
+  .sidebar-brand span{color:var(--accent);}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--text-dim);cursor:pointer;transition:all .15s;font-size:.92rem;}
+  .nav-item:hover{color:var(--text);background:var(--card-hover);}
+  .nav-item.active{color:var(--accent);background:rgba(74,158,255,.08);border-right:3px solid var(--accent);}
+  .sidebar-bottom{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);}
+  .sidebar-user{font-size:.85rem;color:var(--text-dim);margin-bottom:8px;}
+  .sidebar-user strong{color:var(--text);font-weight:600;}
+
+  .main-content{flex:1;overflow-y:auto;max-height:100vh;}
+  .page-header{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:rgba(11,14,17,.85);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10;}
+  .page-title{font-size:1.2rem;font-weight:700;}
+  .page-body{padding:24px 32px 60px;}
+
+  /* Summary */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:28px;}
+  .summary-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;transition:background .2s;}
+  .summary-card:hover{background:var(--card-hover);}
+  .summary-card .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim);margin-bottom:4px;}
+  .summary-card .value{font-size:1.5rem;font-weight:700;}
+
+  /* Charts row */
+  .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;}
+  .chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+  .chart-card h3{font-size:.9rem;color:var(--text-dim);margin-bottom:12px;font-weight:600;}
+  .chart-card canvas{width:100%!important;max-height:240px;}
+
+  /* Top movers */
+  .movers-section{margin-bottom:28px;}
+  .movers-section h3{font-size:.95rem;margin-bottom:12px;color:var(--text-dim);}
+  .movers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+  .mover-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all .15s;}
+  .mover-card:hover{background:var(--card-hover);border-color:var(--text-dim);}
+  .mover-symbol{font-weight:700;font-size:1rem;margin-bottom:2px;}
+  .mover-change{font-size:.9rem;font-weight:600;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;}
+  .tab{padding:7px 18px;border-radius:8px;border:none;background:transparent;color:var(--text-dim);font-size:.88rem;cursor:pointer;font-family:var(--font);transition:all .2s;}
+  .tab:hover{color:var(--text);background:var(--card);}
+  .tab.active{color:#fff;background:var(--accent);}
+
+  /* Table */
+  .data-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .data-table th{text-align:left;padding:11px 14px;font-size:.73rem;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);border-bottom:1px solid var(--border);font-weight:600;}
+  .data-table td{padding:12px 14px;font-size:.88rem;border-bottom:1px solid var(--border);}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:var(--card-hover);}
+  .data-table th.sortable{cursor:pointer;user-select:none;}
+  .data-table th.sortable:hover{color:var(--accent);}
+
+  .symbol-cell{font-weight:700;letter-spacing:.3px;cursor:pointer;color:var(--accent);}
+  .symbol-cell:hover{text-decoration:underline;}
+  .type-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:600;text-transform:uppercase;}
+  .type-Stock{background:#1a365d;color:#63b3ed;}
+  .type-ETF{background:#22543d;color:#68d391;}
+  .type-Crypto{background:#553c9a;color:#b794f4;}
+  .type-Forex{background:#744210;color:#f6ad55;}
+  .dir-LONG{color:var(--green);font-weight:600;font-size:.8rem;}
+  .dir-SHORT{color:var(--red);font-weight:600;font-size:.8rem;}
+  .positive{color:var(--green);}
+  .negative{color:var(--red);}
+  .mono{font-variant-numeric:tabular-nums;}
+  .action-BUY{color:var(--green);font-weight:600;}
+  .action-SELL{color:var(--red);font-weight:600;}
+
+  /* Account cards */
+  .account-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px;}
+  .account-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+  .account-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .account-card-name{font-weight:700;font-size:1.05rem;}
+  .account-card-stats{font-size:.85rem;color:var(--text-dim);display:flex;flex-direction:column;gap:4px;}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;display:none;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;}
+  .modal h3{margin-bottom:16px;font-size:1.15rem;}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+
+  /* Search results dropdown */
+  .search-dropdown{position:absolute;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50;display:none;}
+  .search-dropdown.show{display:block;}
+  .search-item{padding:8px 14px;cursor:pointer;font-size:.88rem;display:flex;justify-content:space-between;}
+  .search-item:hover{background:var(--card-hover);}
+  .search-item .desc{color:var(--text-dim);font-size:.8rem;}
+  .search-wrap{position:relative;}
+
+  /* Asset detail */
+  .asset-header{display:flex;align-items:baseline;gap:16px;margin-bottom:20px;}
+  .asset-header h2{font-size:1.6rem;}
+  .asset-price{font-size:1.3rem;font-weight:600;}
+  .quote-details{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:24px;}
+  .quote-field{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;}
+  .quote-field .ql{font-size:.72rem;text-transform:uppercase;color:var(--text-dim);letter-spacing:.5px;}
+  .quote-field .qv{font-size:1.1rem;font-weight:600;}
+  #candlestick-chart{width:100%;height:400px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden;}
+
+  /* Filters bar */
+  .filters-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+  .filters-bar select,.filters-bar input{padding:7px 12px;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.88rem;font-family:var(--font);outline:none;}
+  .filters-bar select:focus,.filters-bar input:focus{border-color:var(--accent);}
+
+  .pagination{display:flex;gap:8px;align-items:center;margin-top:16px;justify-content:center;}
+  .pagination button{padding:6px 14px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;cursor:pointer;font-family:var(--font);}
+  .pagination button:hover{background:var(--card-hover);}
+  .pagination button:disabled{opacity:.4;cursor:default;}
+  .pagination span{color:var(--text-dim);font-size:.88rem;}
+
+  .loading-small{color:var(--text-dim);padding:40px;text-align:center;}
+  .spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--text-dim);}
+
+  .refresh-indicator{font-size:.75rem;color:var(--text-dim);padding:4px 12px;background:var(--card);border-radius:20px;border:1px solid var(--border);}
+
+  @media(max-width:768px){
+    .sidebar{display:none;}
+    .charts-row{grid-template-columns:1fr;}
+    .page-body{padding:16px 12px 40px;}
+    .summary{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH: LOGIN -->
+<div id="page-login" class="auth-wrapper" style="display:none;">
+  <div class="auth-box">
+    <h2>&#9670; Portfolio</h2>
+    <p class="sub">Sign in to your account</p>
+    <div class="auth-error" id="login-error"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="demo@demo.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="demo123"></div>
+    <button class="btn btn-primary" id="login-btn">Sign In</button>
+    <div class="auth-switch">No account? <a href="#register">Register</a></div>
+  </div>
+</div>
+
+<!-- AUTH: REGISTER -->
+<div id="page-register" class="auth-wrapper" style="display:none;">
+  <div class="auth-box">
+    <h2>Create Account</h2>
+    <p class="sub">Start tracking your portfolio</p>
+    <div class="auth-error" id="register-error"></div>
+    <div class="form-group"><label>Username</label><input type="text" id="reg-username" placeholder="Your name"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="you@example.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="reg-password" placeholder="Min 4 characters"></div>
+    <button class="btn btn-primary" id="register-btn">Create Account</button>
+    <div class="auth-switch">Already have an account? <a href="#login">Sign in</a></div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app-shell" class="app-layout" style="display:none;">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span>&#9670;</span> Portfolio</div>
+    <div class="nav-item active" data-page="dashboard">&#9632; Dashboard</div>
+    <div class="nav-item" data-page="accounts">&#9641; Accounts</div>
+    <div class="nav-item" data-page="transactions">&#9656; Transactions</div>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">Signed in as<br><strong id="sidebar-username"></strong></div>
+      <button class="btn btn-outline btn-sm" id="logout-btn" style="width:100%;">Sign Out</button>
+    </div>
+  </aside>
+  <div class="main-content">
+    <div class="page-header">
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div id="header-actions"></div>
+    </div>
+    <div class="page-body" id="page-body"></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-account">
+  <div class="modal">
+    <h3>Create New Account</h3>
+    <div class="form-group"><label>Provider</label>
+      <select id="new-acct-provider"><option value="LEUMI">Leumi</option><option value="HAPOALIM">Hapoalim</option><option value="OTHER">Other</option></select>
+    </div>
+    <div class="form-group" id="custom-name-group" style="display:none;"><label>Custom Name</label><input type="text" id="new-acct-custom" placeholder="e.g. Binance, Schwab"></div>
+    <div class="auth-error" id="add-acct-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-add-account')">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="create-acct-btn">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-position">
+  <div class="modal">
+    <h3>Add Position</h3>
+    <div class="form-group"><label>Account</label><select id="pos-account"></select></div>
+    <div class="form-group"><label>Asset Type</label>
+      <select id="pos-asset-type"><option value="STOCK">Stock</option><option value="ETF">ETF</option><option value="CRYPTO">Crypto</option><option value="FOREX">Forex</option></select>
+    </div>
+    <div class="form-group search-wrap"><label>Symbol</label>
+      <input type="text" id="pos-symbol" placeholder="Search symbol..." autocomplete="off">
+      <div class="search-dropdown" id="symbol-dropdown"></div>
+    </div>
+    <div class="form-group" id="pos-exchange-group" style="display:none;"><label>Exchange</label><input type="text" id="pos-exchange" placeholder="e.g. BINANCE, OANDA"></div>
+    <div class="form-group"><label>Quantity (negative for short)</label><input type="number" id="pos-quantity" placeholder="100"></div>
+    <div class="form-group"><label>Purchase Price</label><input type="number" step="any" id="pos-price" placeholder="150.00"></div>
+    <div class="auth-error" id="add-pos-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-add-position')">Cancel</button>
+      <button class="btn btn-green btn-sm" id="create-pos-btn">Add Position</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ===================== STATE ===================== */
+  let token = sessionStorage.getItem('token');
+  let currentUser = null;
+  let portfolioData = null;
+  let activePage = 'dashboard';
+  let activeTab = 'all';
+  let refreshTimer = null;
+  let pieChart = null;
+  let lineChart = null;
+  let tvChart = null;
+  let searchTimeout = null;
+  let txPage = 0;
+  let txSort = 'date';
+  let txFilterAccount = '';
+  let txFilterType = '';
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+
+  /* ===================== API HELPERS ===================== */
+  async function api(path, opts = {}) {
+    const headers = {'Content-Type':'application/json'};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(path, { ...opts, headers: { ...headers, ...(opts.headers||{}) } });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+    if (!res.ok) {
+      const msg = (data && data.error) ? data.error : ('Error ' + res.status);
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function fmt(n) { return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function pctClass(v) { return v >= 0 ? 'positive' : 'negative'; }
+  function sign(v) { return v >= 0 ? '+' : ''; }
+  function esc(s) { const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+  /* ===================== ROUTING ===================== */
+  function route() {
+    const hash = location.hash.slice(1) || '';
+    if (!token) {
+      if (hash === 'register') showPage('register');
+      else showPage('login');
+      return;
+    }
+    if (hash.startsWith('asset/')) {
+      showApp(); activePage = 'asset';
+      renderAssetPage(decodeURIComponent(hash.slice(6)));
+      return;
+    }
+    const page = ['dashboard','accounts','transactions'].includes(hash) ? hash : 'dashboard';
+    showApp(); activePage = page;
+    updateNav();
+    loadAndRender();
+  }
+
+  function showPage(page) {
+    $('#page-login').style.display = page === 'login' ? '' : 'none';
+    $('#page-register').style.display = page === 'register' ? '' : 'none';
+    $('#app-shell').style.display = 'none';
+    stopRefresh();
+  }
+
+  function showApp() {
+    $('#page-login').style.display = 'none';
+    $('#page-register').style.display = 'none';
+    $('#app-shell').style.display = '';
+  }
+
+  function updateNav() {
+    $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === activePage));
+    const titles = { dashboard:'Dashboard', accounts:'Accounts', transactions:'Transactions' };
+    $('#page-title').textContent = titles[activePage] || 'Dashboard';
+  }
+
+  /* ===================== AUTH ===================== */
+  async function doLogin() {
+    const email = $('#login-email').value.trim();
+    const password = $('#login-password').value;
+    const errEl = $('#login-error');
+    errEl.style.display = 'none';
+    try {
+      const data = await api('/api/auth/login', { method:'POST', body: JSON.stringify({ email, password }) });
+      token = data.token;
+      sessionStorage.setItem('token', token);
+      currentUser = { userId: data.userId, username: data.username, email: data.email };
+      location.hash = '#dashboard';
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    }
+  }
+
+  async function doRegister() {
+    const username = $('#reg-username').value.trim();
+    const email = $('#reg-email').value.trim();
+    const password = $('#reg-password').value;
+    const errEl = $('#register-error');
+    errEl.style.display = 'none';
+    try {
+      const data = await api('/api/auth/register', { method:'POST', body: JSON.stringify({ username, email, password }) });
+      token = data.token;
+      sessionStorage.setItem('token', token);
+      currentUser = { userId: data.userId, username: data.username, email: data.email };
+      location.hash = '#dashboard';
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    }
+  }
+
+  async function doLogout() {
+    try { await api('/api/auth/logout', { method:'POST' }); } catch {}
+    token = null; currentUser = null; portfolioData = null;
+    sessionStorage.removeItem('token');
+    stopRefresh();
+    location.hash = '#login';
+  }
+
+  async function loadCurrentUser() {
+    if (!token) return false;
+    try {
+      currentUser = await api('/api/auth/me');
+      return true;
+    } catch {
+      token = null; sessionStorage.removeItem('token');
+      return false;
+    }
+  }
+
+  /* ===================== DATA LOADING ===================== */
+  async function loadPortfolio() {
+    portfolioData = await api('/api/portfolio');
+  }
+
+  async function loadAndRender() {
+    const body = $('#page-body');
+    body.innerHTML = '<div class="loading-small"><div class="spinner"></div>Loading...</div>';
+    try {
+      if (!currentUser) await loadCurrentUser();
+      $('#sidebar-username').textContent = currentUser ? currentUser.username : '';
+      await loadPortfolio();
+      switch (activePage) {
+        case 'dashboard': renderDashboard(); startRefresh(); break;
+        case 'accounts': renderAccounts(); break;
+        case 'transactions': txPage = 0; renderTransactions(); break;
+      }
+    } catch (e) {
+      body.innerHTML = '<div class="empty-state">Error loading data: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  /* ===================== DASHBOARD ===================== */
+  function renderDashboard() {
+    const d = portfolioData;
+    let posCount = 0;
+    d.accounts.forEach(a => posCount += a.positions.length);
+
+    const cards = [
+      { label:'Total Value', value:'$' + fmt(d.totalValue) },
+      { label:'Total P&L', value: sign(d.totalProfit) + '$' + fmt(Math.abs(d.totalProfit)), cls: pctClass(d.totalProfit) },
+      { label:'Return', value: sign(d.totalProfitPct) + fmt(Math.abs(d.totalProfitPct)) + '%', cls: pctClass(d.totalProfitPct) },
+      { label:'Accounts', value: d.accounts.length },
+      { label:'Positions', value: posCount },
+    ];
+
+    let html = '<div class="summary">' + cards.map(c =>
+      `<div class="summary-card"><div class="label">${c.label}</div><div class="value ${c.cls||''}">${c.value}</div></div>`
+    ).join('') + '</div>';
+
+    // Charts row
+    html += '<div class="charts-row"><div class="chart-card"><h3>Allocation by Asset Type</h3><canvas id="pie-chart"></canvas></div>';
+    html += '<div class="chart-card"><h3>Allocation by Account</h3><canvas id="account-pie-chart"></canvas></div></div>';
+
+    // Top Movers
+    html += '<div class="movers-section"><h3>Top Movers (by P&L %)</h3><div class="movers-grid" id="movers-grid"></div></div>';
+
+    // Tabs + positions
+    const tabs = [{ id:'all', label:'All Accounts' }];
+    d.accounts.forEach(a => tabs.push({ id: a.provider, label: a.provider }));
+    html += '<div class="tabs" id="dash-tabs">' + tabs.map(t =>
+      `<button class="tab ${t.id===activeTab?'active':''}" data-tab="${esc(t.id)}">${esc(t.label)}</button>`
+    ).join('') + '</div>';
+    html += '<div id="positions-container"></div>';
+
+    // Header actions
+    $('#header-actions').innerHTML = '<span class="refresh-indicator" id="refresh-ind">Auto-refresh: 30s</span>';
+
+    $('#page-body').innerHTML = html;
+
+    // Wire tabs
+    $$('#dash-tabs .tab').forEach(btn => btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab;
+      $$('#dash-tabs .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === activeTab));
+      renderPositionsTable();
+    }));
+
+    renderPositionsTable();
+    renderPieCharts();
+    renderTopMovers();
+  }
+
+  function renderPositionsTable() {
+    const d = portfolioData;
+    const accounts = activeTab === 'all' ? d.accounts : d.accounts.filter(a => a.provider === activeTab);
+    const container = $('#positions-container');
+    if (!accounts.length) { container.innerHTML = '<div class="empty-state">No accounts</div>'; return; }
+
+    container.innerHTML = accounts.map(account => {
+      const pc = pctClass(account.totalProfit);
+      const rows = account.positions.map(p => {
+        const c = pctClass(p.profit);
+        return `<tr>
+          <td class="symbol-cell" data-symbol="${esc(p.symbol)}">${esc(p.symbol)}</td>
+          <td><span class="type-badge type-${esc(p.assetType)}">${esc(p.assetType)}</span></td>
+          <td><span class="dir-${esc(p.direction)}">${esc(p.direction)}</span></td>
+          <td class="mono">${Math.abs(p.quantity)}</td>
+          <td class="mono">$${fmt(p.originalPrice)}</td>
+          <td class="mono">$${fmt(p.currentPrice)}</td>
+          <td class="mono">$${fmt(Math.abs(p.totalValue))}</td>
+          <td class="mono ${c}">${sign(p.profit)}$${fmt(Math.abs(p.profit))}</td>
+          <td class="mono ${c}">${sign(p.profitPct)}${fmt(Math.abs(p.profitPct))}%</td>
+          <td><button class="btn btn-danger btn-sm sell-btn" data-account="${esc(account.provider)}" data-symbol="${esc(p.symbol)}">Sell</button></td>
+        </tr>`;
+      }).join('');
+
+      return `<div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;">
+          <div style="font-weight:600;font-size:1.02rem;">${esc(account.provider)}</div>
+          <div style="display:flex;gap:20px;font-size:.83rem;color:var(--text-dim);">
+            <span>Value: <strong>$${fmt(account.totalValue)}</strong></span>
+            <span>P&L: <strong class="${pc}">${sign(account.totalProfit)}$${fmt(Math.abs(account.totalProfit))}</strong></span>
+          </div>
+        </div>
+        <table class="data-table" style="border-top:none;border-radius:0 0 var(--radius) var(--radius);">
+          <thead><tr><th>Symbol</th><th>Type</th><th>Dir</th><th>Qty</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&L</th><th>Return</th><th></th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="10" style="text-align:center;color:var(--text-dim);padding:20px;">No positions</td></tr>'}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+
+    // Wire sell buttons
+    container.querySelectorAll('.sell-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Sell this position?')) return;
+        try {
+          await api(`/api/positions/${encodeURIComponent(btn.dataset.account)}/${encodeURIComponent(btn.dataset.symbol)}`, { method:'DELETE' });
+          await loadPortfolio();
+          renderPositionsTable();
+          renderPieCharts();
+          renderTopMovers();
+        } catch (e) { alert('Failed: ' + e.message); }
+      });
+    });
+
+    // Wire symbol clicks to asset page
+    container.querySelectorAll('.symbol-cell').forEach(cell => {
+      cell.addEventListener('click', () => { location.hash = '#asset/' + encodeURIComponent(cell.dataset.symbol); });
+    });
+  }
+
+  function renderPieCharts() {
+    const d = portfolioData;
+    // Type allocation
+    const typeMap = {};
+    d.accounts.forEach(a => a.positions.forEach(p => {
+      typeMap[p.assetType] = (typeMap[p.assetType]||0) + Math.abs(p.totalValue);
+    }));
+    const typeColors = { Stock:'#63b3ed', ETF:'#68d391', Crypto:'#b794f4', Forex:'#f6ad55' };
+    const typeLabels = Object.keys(typeMap);
+    const typeValues = typeLabels.map(l => typeMap[l]);
+
+    if (pieChart) pieChart.destroy();
+    const ctx1 = document.getElementById('pie-chart');
+    if (ctx1) {
+      pieChart = new Chart(ctx1, {
+        type:'doughnut',
+        data: { labels: typeLabels, datasets:[{ data: typeValues, backgroundColor: typeLabels.map(l => typeColors[l]||'#666'), borderWidth:0 }] },
+        options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ color:'#7a8599', padding:12 } } } }
+      });
+    }
+
+    // Account allocation
+    const acctLabels = d.accounts.map(a => a.provider);
+    const acctValues = d.accounts.map(a => Math.abs(a.totalValue));
+    const acctColors = ['#4a9eff','#00c896','#b794f4','#f6ad55','#ff4d6a','#63b3ed','#68d391'];
+
+    if (lineChart) lineChart.destroy();
+    const ctx2 = document.getElementById('account-pie-chart');
+    if (ctx2) {
+      lineChart = new Chart(ctx2, {
+        type:'doughnut',
+        data: { labels: acctLabels, datasets:[{ data: acctValues, backgroundColor: acctColors.slice(0, acctLabels.length), borderWidth:0 }] },
+        options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ color:'#7a8599', padding:12 } } } }
+      });
+    }
+  }
+
+  function renderTopMovers() {
+    const d = portfolioData;
+    const all = [];
+    d.accounts.forEach(a => a.positions.forEach(p => all.push(p)));
+    all.sort((a, b) => Math.abs(b.profitPct) - Math.abs(a.profitPct));
+    const top = all.slice(0, 6);
+    const grid = $('#movers-grid');
+    if (!grid) return;
+    grid.innerHTML = top.map(p => {
+      const c = pctClass(p.profitPct);
+      return `<div class="mover-card" data-symbol="${esc(p.symbol)}">
+        <div class="mover-symbol">${esc(p.symbol)}</div>
+        <div class="mover-change ${c}">${sign(p.profitPct)}${fmt(Math.abs(p.profitPct))}% &middot; ${sign(p.profit)}$${fmt(Math.abs(p.profit))}</div>
+        <div style="font-size:.78rem;color:var(--text-dim);margin-top:2px;">${esc(p.assetType)} &middot; $${fmt(p.currentPrice)}</div>
+      </div>`;
+    }).join('');
+    grid.querySelectorAll('.mover-card').forEach(card => {
+      card.addEventListener('click', () => { location.hash = '#asset/' + encodeURIComponent(card.dataset.symbol); });
+    });
+  }
+
+  /* ===================== ACCOUNTS PAGE ===================== */
+  function renderAccounts() {
+    const d = portfolioData;
+    $('#header-actions').innerHTML = '<button class="btn btn-primary btn-sm" id="add-acct-btn">+ New Account</button>';
+    let html = '<div class="account-grid">';
+    html += d.accounts.map(a => {
+      const pc = pctClass(a.totalProfit);
+      return `<div class="account-card">
+        <div class="account-card-header">
+          <div class="account-card-name">${esc(a.provider)}</div>
+          <button class="btn btn-danger btn-sm del-acct-btn" data-provider="${esc(a.provider)}">Delete</button>
+        </div>
+        <div class="account-card-stats">
+          <span>Value: <strong>$${fmt(a.totalValue)}</strong></span>
+          <span>P&L: <strong class="${pc}">${sign(a.totalProfit)}$${fmt(Math.abs(a.totalProfit))}</strong> (${sign(a.totalProfitPct)}${fmt(Math.abs(a.totalProfitPct))}%)</span>
+          <span>Positions: ${a.positionCount}</span>
+        </div>
+      </div>`;
+    }).join('');
+    html += '</div>';
+
+    // Add position button
+    html += '<div style="margin-bottom:24px;"><button class="btn btn-green btn-sm" id="add-pos-btn">+ Add Position</button></div>';
+
+    // Positions list
+    html += '<h3 style="margin-bottom:12px;color:var(--text-dim);font-size:.95rem;">All Positions</h3>';
+    const allPos = [];
+    d.accounts.forEach(a => a.positions.forEach(p => allPos.push({ ...p, account: a.provider })));
+    if (allPos.length) {
+      html += '<table class="data-table"><thead><tr><th>Account</th><th>Symbol</th><th>Type</th><th>Qty</th><th>Avg Cost</th><th>Price</th><th>Value</th><th>P&L</th></tr></thead><tbody>';
+      html += allPos.map(p => {
+        const c = pctClass(p.profit);
+        return `<tr><td>${esc(p.account)}</td><td class="symbol-cell" data-symbol="${esc(p.symbol)}">${esc(p.symbol)}</td><td><span class="type-badge type-${esc(p.assetType)}">${esc(p.assetType)}</span></td><td class="mono">${Math.abs(p.quantity)}</td><td class="mono">$${fmt(p.originalPrice)}</td><td class="mono">$${fmt(p.currentPrice)}</td><td class="mono">$${fmt(Math.abs(p.totalValue))}</td><td class="mono ${c}">${sign(p.profit)}$${fmt(Math.abs(p.profit))}</td></tr>`;
+      }).join('');
+      html += '</tbody></table>';
+    } else {
+      html += '<div class="empty-state">No positions yet. Add your first position!</div>';
+    }
+
+    $('#page-body').innerHTML = html;
+
+    // Wire buttons
+    $('#add-acct-btn').addEventListener('click', () => openModal('modal-add-account'));
+    const addPosBtn = $('#add-pos-btn');
+    if (addPosBtn) addPosBtn.addEventListener('click', openAddPosition);
+    $$('.del-acct-btn').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('Delete account "' + btn.dataset.provider + '" and all its positions?')) return;
+      try {
+        await api('/api/accounts/' + encodeURIComponent(btn.dataset.provider), { method:'DELETE' });
+        await loadPortfolio(); renderAccounts();
+      } catch (e) { alert('Failed: ' + e.message); }
+    }));
+    $$('.symbol-cell').forEach(cell => cell.addEventListener('click', () => { location.hash = '#asset/' + encodeURIComponent(cell.dataset.symbol); }));
+  }
+
+  /* ===================== TRANSACTIONS PAGE ===================== */
+  async function renderTransactions() {
+    const d = portfolioData;
+    $('#header-actions').innerHTML = '';
+
+    const accountOptions = d.accounts.map(a => `<option value="${esc(a.provider)}">${esc(a.provider)}</option>`).join('');
+    let html = '<div class="filters-bar">';
+    html += '<select id="tx-filter-account"><option value="">All Accounts</option>' + accountOptions + '</select>';
+    html += '<select id="tx-filter-type"><option value="">All Types</option><option>Stock</option><option>ETF</option><option>Crypto</option><option>Forex</option></select>';
+    html += '<select id="tx-sort"><option value="date">Sort: Date</option><option value="symbol">Sort: Symbol</option><option value="amount">Sort: Amount</option></select>';
+    html += '</div>';
+    html += '<div id="tx-table-container"><div class="loading-small"><div class="spinner"></div>Loading...</div></div>';
+    html += '<div class="pagination" id="tx-pagination"></div>';
+    $('#page-body').innerHTML = html;
+
+    // Set filter values
+    $('#tx-filter-account').value = txFilterAccount;
+    $('#tx-filter-type').value = txFilterType;
+    $('#tx-sort').value = txSort;
+
+    // Wire filters
+    const reload = () => { txPage = 0; loadTxData(); };
+    $('#tx-filter-account').addEventListener('change', e => { txFilterAccount = e.target.value; reload(); });
+    $('#tx-filter-type').addEventListener('change', e => { txFilterType = e.target.value; reload(); });
+    $('#tx-sort').addEventListener('change', e => { txSort = e.target.value; reload(); });
+
+    loadTxData();
+  }
+
+  async function loadTxData() {
+    const container = $('#tx-table-container');
+    container.innerHTML = '<div class="loading-small"><div class="spinner"></div>Loading...</div>';
+    try {
+      let url = `/api/transactions?page=${txPage}&size=20&sortBy=${txSort}`;
+      if (txFilterAccount) url += '&account=' + encodeURIComponent(txFilterAccount);
+      if (txFilterType) url += '&assetType=' + encodeURIComponent(txFilterType);
+      const data = await api(url);
+
+      if (!data.transactions.length) {
+        container.innerHTML = '<div class="empty-state">No transactions found</div>';
+        $('#tx-pagination').innerHTML = '';
+        return;
+      }
+
+      let html = '<table class="data-table"><thead><tr><th>Date</th><th>Action</th><th>Symbol</th><th>Type</th><th>Account</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>';
+      html += data.transactions.map(t => {
+        const date = new Date(t.timestamp).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+        return `<tr>
+          <td class="mono">${date}</td>
+          <td><span class="action-${esc(t.action)}">${esc(t.action)}</span></td>
+          <td class="symbol-cell" data-symbol="${esc(t.symbol)}">${esc(t.symbol)}</td>
+          <td><span class="type-badge type-${esc(t.assetType)}">${esc(t.assetType)}</span></td>
+          <td>${esc(t.accountProvider)}</td>
+          <td class="mono">${Math.abs(t.quantity)}</td>
+          <td class="mono">$${fmt(t.price)}</td>
+          <td class="mono">$${fmt(t.total)}</td>
+        </tr>`;
+      }).join('');
+      html += '</tbody></table>';
+      container.innerHTML = html;
+
+      // Pagination
+      const totalPages = Math.ceil(data.total / data.size);
+      const pag = $('#tx-pagination');
+      pag.innerHTML = `<button id="tx-prev" ${txPage===0?'disabled':''}>&#9664; Prev</button>
+        <span>Page ${txPage+1} of ${totalPages}</span>
+        <button id="tx-next" ${txPage>=totalPages-1?'disabled':''}>Next &#9654;</button>`;
+      const prevBtn = $('#tx-prev'); const nextBtn = $('#tx-next');
+      if (prevBtn) prevBtn.addEventListener('click', () => { txPage--; loadTxData(); });
+      if (nextBtn) nextBtn.addEventListener('click', () => { txPage++; loadTxData(); });
+
+      // Wire symbol clicks
+      container.querySelectorAll('.symbol-cell').forEach(cell => {
+        cell.addEventListener('click', () => { location.hash = '#asset/' + encodeURIComponent(cell.dataset.symbol); });
+      });
+    } catch (e) {
+      container.innerHTML = '<div class="empty-state">Error: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  /* ===================== ASSET DETAIL PAGE ===================== */
+  async function renderAssetPage(symbol) {
+    updateNav();
+    $('#page-title').textContent = 'Asset: ' + symbol;
+    $('#header-actions').innerHTML = '<button class="btn btn-outline btn-sm" onclick="location.hash=\'#dashboard\'">&#9664; Back</button>';
+    const body = $('#page-body');
+    body.innerHTML = '<div class="loading-small"><div class="spinner"></div>Loading quote...</div>';
+    stopRefresh();
+
+    try {
+      const quoteRaw = await api('/api/market/quote?symbol=' + encodeURIComponent(symbol));
+      const q = typeof quoteRaw === 'string' ? JSON.parse(quoteRaw) : quoteRaw;
+
+      const change = q.d || 0;
+      const changePct = q.dp || 0;
+      const cc = change >= 0 ? 'positive' : 'negative';
+
+      let html = '<div class="asset-header"><h2>' + esc(symbol) + '</h2>';
+      html += '<div class="asset-price">$' + fmt(q.c || 0) + ' <span class="' + cc + '" style="font-size:.95rem;">' + sign(change) + fmt(Math.abs(change)) + ' (' + sign(changePct) + fmt(Math.abs(changePct)) + '%)</span></div></div>';
+
+      html += '<div class="quote-details">';
+      html += qf('Current', '$' + fmt(q.c||0)) + qf('Open', '$' + fmt(q.o||0)) + qf('High', '$' + fmt(q.h||0)) + qf('Low', '$' + fmt(q.l||0)) + qf('Prev Close', '$' + fmt(q.pc||0));
+      html += '</div>';
+
+      html += '<h3 style="margin-bottom:12px;color:var(--text-dim);font-size:.95rem;">Price Chart</h3>';
+      html += '<div id="candlestick-chart"></div>';
+
+      body.innerHTML = html;
+
+      // Load candle data
+      const now = Math.floor(Date.now()/1000);
+      const from = now - 365*24*60*60;
+      let type = 'stock';
+      // Guess type from symbol
+      if (symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('XRP')) type = 'crypto';
+      else if (symbol.includes('USD') && symbol.length === 6 || symbol.includes('JPY') || symbol.includes('EUR') && symbol.length <= 7) type = 'forex';
+      const candlePrefix = type === 'crypto' ? 'BINANCE:' : '';
+      const candleSymbol = type === 'crypto' ? candlePrefix + symbol : symbol;
+
+      try {
+        const candleRaw = await api(`/api/market/candles?symbol=${encodeURIComponent(candleSymbol)}&resolution=D&from=${from}&to=${now}&type=${type}`);
+        const candles = typeof candleRaw === 'string' ? JSON.parse(candleRaw) : candleRaw;
+
+        if (candles && candles.s === 'ok' && candles.t && candles.t.length > 0) {
+          renderCandlestickChart(candles);
+        } else {
+          $('#candlestick-chart').innerHTML = '<div class="empty-state">No chart data available for this symbol</div>';
+        }
+      } catch {
+        $('#candlestick-chart').innerHTML = '<div class="empty-state">Could not load chart data</div>';
+      }
+    } catch (e) {
+      body.innerHTML = '<div class="empty-state">Error loading quote: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  function qf(label, value) {
+    return `<div class="quote-field"><div class="ql">${label}</div><div class="qv">${value}</div></div>`;
+  }
+
+  function renderCandlestickChart(candles) {
+    const container = document.getElementById('candlestick-chart');
+    if (!container) return;
+    container.innerHTML = '';
+    if (tvChart) { tvChart.remove(); tvChart = null; }
+
+    const chart = LightweightCharts.createChart(container, {
+      width: container.clientWidth,
+      height: 400,
+      layout: { background: { type: 'solid', color: '#141921' }, textColor: '#7a8599' },
+      grid: { vertLines: { color: '#1e2738' }, horzLines: { color: '#1e2738' } },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      timeScale: { borderColor: '#1e2738', timeVisible: false },
+      rightPriceScale: { borderColor: '#1e2738' },
+    });
+
+    const series = chart.addCandlestickSeries({
+      upColor: '#00c896', downColor: '#ff4d6a',
+      borderUpColor: '#00c896', borderDownColor: '#ff4d6a',
+      wickUpColor: '#00c896', wickDownColor: '#ff4d6a',
+    });
+
+    const data = [];
+    for (let i = 0; i < candles.t.length; i++) {
+      data.push({
+        time: candles.t[i],
+        open: candles.o[i],
+        high: candles.h[i],
+        low: candles.l[i],
+        close: candles.c[i],
+      });
+    }
+    series.setData(data);
+    chart.timeScale().fitContent();
+    tvChart = chart;
+
+    new ResizeObserver(() => chart.applyOptions({ width: container.clientWidth })).observe(container);
+  }
+
+  /* ===================== ADD POSITION MODAL ===================== */
+  function openAddPosition() {
+    const sel = $('#pos-account');
+    sel.innerHTML = portfolioData.accounts.map(a => `<option value="${esc(a.provider)}">${esc(a.provider)}</option>`).join('');
+    $('#pos-symbol').value = '';
+    $('#pos-quantity').value = '';
+    $('#pos-price').value = '';
+    $('#pos-exchange').value = '';
+    $('#add-pos-error').style.display = 'none';
+    checkExchangeVisibility();
+    openModal('modal-add-position');
+  }
+
+  function checkExchangeVisibility() {
+    const type = $('#pos-asset-type').value;
+    $('#pos-exchange-group').style.display = (type === 'CRYPTO' || type === 'FOREX') ? '' : 'none';
+  }
+
+  /* ===================== SYMBOL SEARCH ===================== */
+  function setupSymbolSearch() {
+    const input = $('#pos-symbol');
+    const dropdown = $('#symbol-dropdown');
+    input.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const q = input.value.trim();
+      if (q.length < 1) { dropdown.classList.remove('show'); return; }
+      searchTimeout = setTimeout(async () => {
+        try {
+          const raw = await api('/api/market/search?q=' + encodeURIComponent(q));
+          const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (data.result && data.result.length) {
+            dropdown.innerHTML = data.result.slice(0, 10).map(r =>
+              `<div class="search-item" data-sym="${esc(r.symbol)}"><span>${esc(r.symbol)}</span><span class="desc">${esc(r.description||'')}</span></div>`
+            ).join('');
+            dropdown.classList.add('show');
+            dropdown.querySelectorAll('.search-item').forEach(item => {
+              item.addEventListener('click', () => {
+                input.value = item.dataset.sym;
+                dropdown.classList.remove('show');
+              });
+            });
+          } else {
+            dropdown.classList.remove('show');
+          }
+        } catch { dropdown.classList.remove('show'); }
+      }, 300);
+    });
+    document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) dropdown.classList.remove('show'); });
+  }
+
+  /* ===================== MODAL HELPERS ===================== */
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+  window.closeModal = closeModal;
+
+  /* ===================== AUTO REFRESH ===================== */
+  function startRefresh() {
+    stopRefresh();
+    refreshTimer = setInterval(async () => {
+      try {
+        await loadPortfolio();
+        renderPositionsTable();
+        renderPieCharts();
+        renderTopMovers();
+      } catch {}
+    }, 30000);
+  }
+
+  function stopRefresh() {
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  }
+
+  /* ===================== EVENT WIRING ===================== */
+  function init() {
+    // Auth
+    $('#login-btn').addEventListener('click', doLogin);
+    $('#login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    $('#register-btn').addEventListener('click', doRegister);
+    $('#reg-password').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+    $('#logout-btn').addEventListener('click', doLogout);
+
+    // Nav
+    $$('.nav-item').forEach(n => n.addEventListener('click', () => { location.hash = '#' + n.dataset.page; }));
+
+    // Create account modal
+    $('#new-acct-provider').addEventListener('change', () => {
+      $('#custom-name-group').style.display = $('#new-acct-provider').value === 'OTHER' ? '' : 'none';
+    });
+    $('#create-acct-btn').addEventListener('click', async () => {
+      const provider = $('#new-acct-provider').value;
+      const customName = $('#new-acct-custom').value.trim();
+      const errEl = $('#add-acct-error');
+      errEl.style.display = 'none';
+      try {
+        await api('/api/accounts', { method:'POST', body: JSON.stringify({ provider, customName }) });
+        closeModal('modal-add-account');
+        await loadPortfolio(); renderAccounts();
+      } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    });
+
+    // Asset type change
+    $('#pos-asset-type').addEventListener('change', checkExchangeVisibility);
+
+    // Create position
+    $('#create-pos-btn').addEventListener('click', async () => {
+      const errEl = $('#add-pos-error');
+      errEl.style.display = 'none';
+      const body = {
+        accountProvider: $('#pos-account').value,
+        symbol: $('#pos-symbol').value.trim().toUpperCase(),
+        assetType: $('#pos-asset-type').value,
+        exchange: $('#pos-exchange').value.trim() || null,
+        quantity: parseInt($('#pos-quantity').value),
+        price: parseFloat($('#pos-price').value),
+      };
+      if (!body.symbol || !body.quantity || !body.price) {
+        errEl.textContent = 'Fill in all fields'; errEl.style.display = 'block'; return;
+      }
+      try {
+        await api('/api/positions', { method:'POST', body: JSON.stringify(body) });
+        closeModal('modal-add-position');
+        await loadPortfolio();
+        if (activePage === 'accounts') renderAccounts();
+        else if (activePage === 'dashboard') { renderPositionsTable(); renderPieCharts(); renderTopMovers(); }
+      } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    });
+
+    // Symbol search
+    setupSymbolSearch();
+
+    // Hash routing
+    window.addEventListener('hashchange', route);
+    route();
+  }
+
+  // Start app
+  (async () => {
+    if (token) {
+      const valid = await loadCurrentUser();
+      if (!valid) token = null;
+    }
+    init();
+  })();
+})();
+</script>
+</body>
+</html>
